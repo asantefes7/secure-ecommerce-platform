@@ -1,0 +1,15 @@
+# Node.js
+node_modules/
+.env
+dist/
+build/
+
+# Logs
+*.log
+
+# Docker
+*.dockerignore
+
+# Misc
+.DS_Store
+Thumbs.db
