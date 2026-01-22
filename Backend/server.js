@@ -11,10 +11,10 @@ app.use(helmet());  // Adds security headers
 app.use(cors());    // Allows frontend requests
 app.use(express.json());  // Parses JSON bodies
 
-// MongoDB connection (uncomment when DB is set up)
-// mongoose.connect(process.env.MONGO_URI)
-//   .then(() => console.log('MongoDB connected'))
-//   .catch(err => console.log(err));
+// MongoDB connection 
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.log(err));
 
 // Basic test route
 app.get('/', (req, res) => {
