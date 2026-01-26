@@ -16,6 +16,13 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => console.log(err));
 
+  // Routes
+const authRouter = require('./routes/auth');
+app.use('/api/auth', authRouter); 
+
+const userRouter = require('./routes/userRoutes');
+app.use('/api/users', userRouter);
+
 // Basic test route
 app.get('/', (req, res) => {
   res.send('Backend API is running!');
