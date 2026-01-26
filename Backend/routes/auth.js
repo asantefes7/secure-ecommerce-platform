@@ -25,6 +25,24 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// Temporary: Register admin (remove after creating first admin)
+router.post('/register-admin', async (req, res) => {
+  const { name, email, password } = req.body;
+  try {
+    let user = await User.findOne({ email });
+    if (user) return res.status(400).json({ message: 'User already exists' });
+
+    user = new User({ name, email, password, isAdmin: true }); // Set isAdmin true
+    await user.save();
+
+    const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+    res.json({ token, user: { id: user._id, name, email, isAdmin: user.isAdmin } });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Login user
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
