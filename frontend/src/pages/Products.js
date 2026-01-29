@@ -20,6 +20,18 @@ const Products = () => {
     fetchProducts();
   }, []);
 
+  const addToCartHandler = (product) => {
+    const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+    const existItem = cartItems.find((x) => x._id === product._id);
+    if (existItem) {
+      cartItems.map((x) => x._id === product._id ? { ...x, qty: x.qty + 1 } : x);
+    } else {
+      cartItems.push({ ...product, qty: 1 });
+    }
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    toast.success(`${product.name} added to cart!`);
+  };
+
   if (loading) return <p>Loading products...</p>;
 
   return (
@@ -35,6 +47,9 @@ const Products = () => {
               <p>{product.description}</p>
               <p><strong>Price:</strong> ${product.price}</p>
               <p><strong>In Stock:</strong> {product.countInStock}</p>
+              <button onClick={() => addToCartHandler(product)} style={{ marginTop: '10px', padding: '8px 16px' }}>
+                Add to Cart
+              </button>
             </li>
           ))}
         </ul>
