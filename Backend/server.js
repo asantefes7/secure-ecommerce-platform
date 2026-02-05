@@ -26,6 +26,9 @@ app.use('/api/users', userRouter);
 const productRouter = require('./routes/productRoutes');
 app.use('/api/products', productRouter);
 
+const checkoutRouter = require('./routes/checkoutRoutes');
+app.use('/api/checkout', checkoutRouter);
+
 // Basic test route
 app.get('/', (req, res) => {
   res.send('Backend API is running!');
