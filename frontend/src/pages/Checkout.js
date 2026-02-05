@@ -15,7 +15,7 @@ const CheckoutForm = () => {
   const [loading, setLoading] = useState(false);
 
   const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
-  const total = Math.round(cartItems.reduce((acc, item) => acc + item.price * item.qty, 0) * 100);  // Round to integer cents
+  const total = Math.round(cartItems.reduce((acc, item) => acc + item.price * item.qty, 0) * 100);  // Integer cents
 
   useEffect(() => {
     if (total > 0) {
@@ -44,11 +44,34 @@ const CheckoutForm = () => {
       toast.error(error.message || 'Payment failed');
     } else if (paymentIntent.status === 'succeeded') {
       const isSuspicious = total / 100 > 100 || cartItems.length > 5;
+
+      // Save order to backend
+      try {
+        const token = localStorage.getItem('token');
+        await axios.post('http://localhost:5001/api/orders', {
+          items: cartItems.map(item => ({
+            product: item._id,
+            name: item.name,
+            qty: item.qty,
+            price: item.price,
+          })),
+          total: total / 100,
+          isFlagged: isSuspicious,
+          paymentIntentId: paymentIntent.id,
+        }, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      } catch (err) {
+        console.error('Order save failed', err);
+        toast.error('Order save failed');
+      }
+
       if (isSuspicious) {
         toast.warning('Potential fraud detected: High-value order flagged for review.');
       } else {
         toast.success('Payment successful! Order placed.');
       }
+
       localStorage.removeItem('cartItems');
       navigate('/');
     }

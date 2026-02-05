@@ -26,28 +26,45 @@ const Cart = () => {
   const total = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
 
   if (cartItems.length === 0) {
-    return <p style={{ padding: '20px' }}>Your cart is empty.</p>;
+    return <p className="text-center my-5">Your cart is empty.</p>;
   }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h2>Shopping Cart</h2>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
-        {cartItems.map((item) => (
-          <li key={item._id} style={{ border: '1px solid #ddd', margin: '10px 0', padding: '10px' }}>
-            <h3>{item.name}</h3>
-            <p>Quantity: {item.qty}</p>
-            <button onClick={() => updateQty(item._id, -1)}>-</button>
-            <span style={{ margin: '0 10px' }}>{item.qty}</span>
-            <button onClick={() => updateQty(item._id, 1)}>+</button>
-            <p>Price: ${item.price.toFixed(2)}</p>
-            <button onClick={() => removeItem(item._id)} style={{ marginTop: '10px', background: 'red', color: 'white' }}>
-              Remove
-            </button>
-          </li>
-        ))}
-      </ul>
-      <h3>Total: ${total.toFixed(2)}</h3>
+    <div className="container my-5">
+      <h2 className="mb-4">Shopping Cart</h2>
+      <table className="table table-striped">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {cartItems.map((item) => (
+            <tr key={item._id}>
+              <td>
+                <strong>{item.name}</strong>
+                <br />
+                {item.description}
+              </td>
+              <td>
+                <button className="btn btn-sm btn-outline-secondary" onClick={() => updateQty(item._id, -1)}>-</button>
+                <span className="mx-3">{item.qty}</span>
+                <button className="btn btn-sm btn-outline-secondary" onClick={() => updateQty(item._id, 1)}>+</button>
+              </td>
+              <td>${(item.price * item.qty).toFixed(2)}</td>
+              <td>
+                <button className="btn btn-danger btn-sm" onClick={() => removeItem(item._id)}>
+                  Remove
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h3 className="text-end">Total: ${total.toFixed(2)}</h3>
     </div>
   );
 };
