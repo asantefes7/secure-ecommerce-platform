@@ -36,4 +36,17 @@ router.get('/flagged', protect, async (req, res) => {
   }
 });
 
+// Get all orders for the logged-in user
+router.get('/my-orders', protect, async (req, res) => {
+  try {
+    const userOrders = await Order.find({ user: req.user.id })
+      .populate('items.product', 'name')
+      .sort({ createdAt: -1 }); // Newest first
+    res.json(userOrders);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;

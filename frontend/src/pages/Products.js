@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 
 const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const products = [
     // Sneakers
@@ -91,9 +92,9 @@ const Products = () => {
     },
   ];
 
-  const filteredProducts = selectedCategory === 'All' 
-    ? products 
-    : products.filter(p => p.category === selectedCategory);
+  const filteredProducts = products
+    .filter(p => selectedCategory === 'All' || p.category === selectedCategory)
+    .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.description.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const addToCartHandler = (product) => {
     let cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
@@ -114,32 +115,26 @@ const Products = () => {
   return (
     <div className="container my-5">
       <h2 className="text-center mb-4">Products</h2>
-      <div className="text-center mb-4">
-        <div className="btn-group" role="group">
-          <button 
-            className={`btn ${selectedCategory === 'All' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSelectedCategory('All')}
-          >
-            All
-          </button>
-          <button 
-            className={`btn ${selectedCategory === 'Sneakers' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSelectedCategory('Sneakers')}
-          >
-            Sneakers
-          </button>
-          <button 
-            className={`btn ${selectedCategory === 'Watches' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSelectedCategory('Watches')}
-          >
-            Watches
-          </button>
-          <button 
-            className={`btn ${selectedCategory === 'Clothing' ? 'btn-primary' : 'btn-outline-primary'}`}
-            onClick={() => setSelectedCategory('Clothing')}
-          >
-            Clothing
-          </button>
+      <div className="row mb-4">
+        <div className="col-md-6">
+          <div className="input-group">
+            <input 
+              type="text" 
+              className="form-control" 
+              placeholder="Search products..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button className="btn btn-outline-secondary" type="button">Search</button>
+          </div>
+        </div>
+        <div className="col-md-6 text-end">
+          <div className="btn-group" role="group">
+            <button className={`btn ${selectedCategory === 'All' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setSelectedCategory('All')}>All</button>
+            <button className={`btn ${selectedCategory === 'Sneakers' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setSelectedCategory('Sneakers')}>Sneakers</button>
+            <button className={`btn ${selectedCategory === 'Watches' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setSelectedCategory('Watches')}>Watches</button>
+            <button className={`btn ${selectedCategory === 'Clothing' ? 'btn-primary' : 'btn-outline-primary'}`} onClick={() => setSelectedCategory('Clothing')}>Clothing</button>
+          </div>
         </div>
       </div>
       <div className="row">
