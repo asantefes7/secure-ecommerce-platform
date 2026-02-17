@@ -5,12 +5,16 @@ import json
 import sys
 
 # Load the pre-trained model
-with open('fraud_model.pkl', 'rb') as f:
-    model = pickle.load(f)
+try:
+    with open('fraud_model.pkl', 'rb') as f:
+        model = pickle.load(f)
+except FileNotFoundError:
+    print(json.dumps({"error": "Model file not found"}))
+    sys.exit(1)
 
-# Read arguments from command line
+# Read 3 arguments: amount, item_count, user_order_count
 if len(sys.argv) != 4:
-    print(json.dumps({"error": "Invalid arguments"}))
+    print(json.dumps({"error": "Expected 3 arguments: amount item_count user_order_count"}))
     sys.exit(1)
 
 try:
@@ -29,7 +33,7 @@ prob = model.predict_proba(features)[0][1]  # Probability of fraud class
 
 # Convert NumPy types to plain Python types
 score = float(round(prob * 100, 2))
-is_fraud = bool(score > 70)  # Convert numpy.bool_ to Python bool
+is_fraud = bool(score > 70 or amount > 500)
 
 result = {
     "score": score,

@@ -29,11 +29,11 @@ app.use('/api/products', productRouter);
 const checkoutRouter = require('./routes/checkoutRoutes');
 app.use('/api/checkout', checkoutRouter);
 
+const ordersRouter = require('./routes/ordersRoutes');
+app.use('/api/orders', ordersRouter); 
+
 const fraudRouter = require('./routes/fraudRoutes');
 app.use('/api/fraud', fraudRouter);
-
-const ordersRouter = require('./routes/ordersRoutes');
-app.use('/api/orders', ordersRouter);
 
 // Basic test route
 app.get('/', (req, res) => {
