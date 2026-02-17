@@ -45,12 +45,11 @@ const CheckoutForm = () => {
     } else if (paymentIntent.status === 'succeeded') {
       const isSuspicious = total / 100 > 100 || cartItems.length > 5;
 
-      // Save order to backend
+      // Save order to backend - updated items structure
       try {
         const token = localStorage.getItem('token');
-        await axios.post('http://localhost:5001/api/orders', {
+        const orderPayload = {
           items: cartItems.map(item => ({
-            product: item._id,
             name: item.name,
             qty: item.qty,
             price: item.price,
@@ -58,11 +57,17 @@ const CheckoutForm = () => {
           total: total / 100,
           isFlagged: isSuspicious,
           paymentIntentId: paymentIntent.id,
-        }, {
+        };
+
+        console.log('Sending order payload:', orderPayload); // ← Debug log
+
+        await axios.post('http://localhost:5001/api/orders', orderPayload, {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        console.log('Order saved successfully');
       } catch (err) {
-        console.error('Order save failed', err);
+        console.error('Order save failed:', err.response?.data || err.message);
         toast.error('Order save failed');
       }
 
