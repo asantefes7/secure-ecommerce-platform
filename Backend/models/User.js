@@ -6,6 +6,20 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   isAdmin: { type: Boolean, default: false },
+
+  // New fields for geo-fencing / location-based fraud detection
+  lastLocation: {
+    type: {
+      lat: { type: Number },
+      lng: { type: Number },
+    },
+    default: null,
+  },
+  lastLocationUpdated: {
+    type: Date,
+    default: null,
+  },
+
 }, { timestamps: true });
 
 // Hash password before saving
