@@ -13,27 +13,47 @@ const CheckoutForm = () => {
   const navigate = useNavigate();
   const [clientSecret, setClientSecret] = useState('');
   const [loading, setLoading] = useState(false);
-  const [fraudScore, setFraudScore] = useState(null); // Store ML score
+  const [fraudScore, setFraudScore] = useState(null);
+  const [location, setLocation] = useState(null); // { lat, lng }
 
   const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
-  const total = Math.round(cartItems.reduce((acc, item) => acc + item.price * item.qty, 0) * 100); // Integer cents
+  const total = Math.round(cartItems.reduce((acc, item) => acc + item.price * item.qty, 0) * 100);
 
   useEffect(() => {
     if (total > 0) {
-      // Step 1: Get Stripe payment intent
       axios.post('http://localhost:5001/api/checkout/create-payment-intent', { amount: total })
         .then(res => setClientSecret(res.data.clientSecret))
         .catch(err => toast.error('Failed to initialize payment'));
+    }
+
+    // Get browser geolocation (ask permission)
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          toast.info('Location captured for fraud check');
+        },
+        (err) => {
+          toast.warning('Location access denied — fraud check limited');
+          console.error('Geolocation error:', err);
+        }
+      );
     }
   }, [total]);
 
   const getFraudScore = async () => {
     const token = localStorage.getItem('token');
     try {
-      const res = await axios.post('http://localhost:5001/api/fraud/score', {
+      const payload = {
         amount: total / 100,
         item_count: cartItems.length,
-      }, {
+        location: location ? { lat: location.lat, lng: location.lng } : null,
+      };
+
+      const res = await axios.post('http://localhost:5001/api/fraud/score', payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFraudScore(res.data);
@@ -49,7 +69,6 @@ const CheckoutForm = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Step 2: Get ML fraud score before payment
     const fraud = await getFraudScore();
     if (!fraud) {
       setLoading(false);
@@ -58,7 +77,7 @@ const CheckoutForm = () => {
 
     if (fraud.is_fraud) {
       const confirm = window.confirm(
-        `High fraud risk detected (score: ${fraud.score}%). Proceed with payment?`
+        `High fraud risk detected (score: ${fraud.score}%). Reason: ${fraud.reason}. Proceed with payment?`
       );
       if (!confirm) {
         setLoading(false);
@@ -80,9 +99,8 @@ const CheckoutForm = () => {
     if (error) {
       toast.error(error.message || 'Payment failed');
     } else if (paymentIntent.status === 'succeeded') {
-      const isSuspicious = total / 100 > 100 || cartItems.length > 5;
+      const isSuspicious = total / 100 > 500 || cartItems.length > 5 || fraud.is_fraud;
 
-      // Save order
       try {
         const token = localStorage.getItem('token');
         await axios.post('http://localhost:5001/api/orders', {
@@ -92,14 +110,13 @@ const CheckoutForm = () => {
             price: item.price,
           })),
           total: total / 100,
-          isFlagged: isSuspicious || fraud.is_fraud,
+          isFlagged: isSuspicious,
           paymentIntentId: paymentIntent.id,
         }, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } catch (err) {
         console.error('Order save failed', err);
-        // Still continue - optional toast
       }
 
       toast.success('Payment successful! Order placed.');
@@ -115,7 +132,6 @@ const CheckoutForm = () => {
       <h2>Checkout</h2>
       <p><strong>Total:</strong> ${(total / 100).toFixed(2)}</p>
 
-      {/* Show fraud score if available */}
       {fraudScore && (
         <div style={{ margin: '10px 0', padding: '10px', background: fraudScore.is_fraud ? '#ffebee' : '#e8f5e9', borderRadius: '4px' }}>
           <strong>Fraud Risk Score:</strong> {fraudScore.score}%  
