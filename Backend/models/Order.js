@@ -11,6 +11,11 @@ const orderSchema = new mongoose.Schema({
   total: { type: Number, required: true, min: 0 },
   isFlagged: { type: Boolean, default: false },
   paymentIntentId: { type: String },
+  status: { 
+    type: String, 
+    enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'], 
+    default: 'Pending' 
+  },  // NEW: Order status field
 }, { timestamps: true });
 
 module.exports = mongoose.model('Order', orderSchema);

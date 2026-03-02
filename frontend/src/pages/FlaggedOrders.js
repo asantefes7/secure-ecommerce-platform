@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
@@ -8,35 +8,49 @@ const FlaggedOrders = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  const fetchFlaggedOrders = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please login first');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const res = await axios.get('http://localhost:5001/api/orders/flagged', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setOrders(res.data);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        toast.error('Admin access required');
+        navigate('/');
+      } else {
+        toast.error('Failed to load flagged orders');
+      }
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [navigate]); // Dependencies: navigate (toast is global, no need)
+
   useEffect(() => {
-    const fetchFlaggedOrders = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Please login first');
-        navigate('/login');
-        return;
-      }
-
-      try {
-        const res = await axios.get('http://localhost:5001/api/orders/flagged', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setOrders(res.data);
-      } catch (err) {
-        if (err.response?.status === 403) {
-          toast.error('Admin access required');
-          navigate('/');
-        } else {
-          toast.error('Failed to load flagged orders');
-        }
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchFlaggedOrders();
-  }, [navigate]);
+  }, [fetchFlaggedOrders]);
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    const token = localStorage.getItem('token');
+    try {
+      await axios.patch(`http://localhost:5001/api/orders/${orderId}/status`, { status: newStatus }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success('Order status updated!');
+      fetchFlaggedOrders(); // Refetch to update table
+    } catch (err) {
+      toast.error('Failed to update status');
+      console.error(err);
+    }
+  };
 
   if (loading) return <p className="text-center my-5">Loading flagged orders...</p>;
 
@@ -63,6 +77,7 @@ const FlaggedOrders = () => {
               <th>Items</th>
               <th>Payment ID</th>
               <th>Date</th>
+              <th>Status</th> {/* NEW: Status column */}
             </tr>
           </thead>
           <tbody>
@@ -83,6 +98,19 @@ const FlaggedOrders = () => {
                 </td>
                 <td>{order.paymentIntentId?.slice(0, 10)}...</td>
                 <td>{new Date(order.createdAt).toLocaleString()}</td>
+                <td>
+                  <select
+                    defaultValue={order.status || 'Pending'} // Handle existing orders without status
+                    onChange={(e) => handleStatusChange(order._id, e.target.value)}
+                    className="form-select form-select-sm d-inline-block w-auto me-2"
+                  >
+                    <option value="Pending">Pending</option>
+                    <option value="Processing">Processing</option>
+                    <option value="Shipped">Shipped</option>
+                    <option value="Delivered">Delivered</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </td>
               </tr>
             ))}
           </tbody>

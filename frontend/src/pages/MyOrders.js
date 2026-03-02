@@ -44,6 +44,33 @@ const MyOrders = () => {
     );
   }
 
+  const getStatusBadge = (status) => {
+    const effectiveStatus = status || 'Pending'; // Default for old orders
+    let badgeClass = '';
+
+    switch (effectiveStatus) {
+      case 'Pending':
+        badgeClass = 'bg-warning';
+        break;
+      case 'Processing':
+        badgeClass = 'bg-info';
+        break;
+      case 'Shipped':
+        badgeClass = 'bg-primary';
+        break;
+      case 'Delivered':
+        badgeClass = 'bg-success';
+        break;
+      case 'Cancelled':
+        badgeClass = 'bg-danger';
+        break;
+      default:
+        badgeClass = 'bg-secondary';
+    }
+
+    return <span className={`badge ${badgeClass}`}>{effectiveStatus}</span>;
+  };
+
   return (
     <div className="container my-5">
       <h2 className="text-center mb-4">My Orders</h2>
@@ -76,11 +103,8 @@ const MyOrders = () => {
                 <td>{order.paymentIntentId?.slice(0, 10)}...</td>
                 <td>{new Date(order.createdAt).toLocaleString()}</td>
                 <td>
-                  {order.isFlagged ? (
-                    <span className="badge bg-danger">Flagged</span>
-                  ) : (
-                    <span className="badge bg-success">Completed</span>
-                  )}
+                  {getStatusBadge(order.status)}
+                  {order.isFlagged && <span className="badge bg-danger ms-2">Flagged</span>} {/* Keep Flagged badge if applicable */}
                 </td>
               </tr>
             ))}

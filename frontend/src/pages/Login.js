@@ -2,48 +2,87 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';  
+import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
+  const [showOtpInput, setShowOtpInput] = useState(false);
   const navigate = useNavigate();
-  const { login } = useAuth();  // Get login function from context
+  const { login } = useAuth();
 
-  const submitHandler = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const { data } = await axios.post('http://localhost:5001/api/auth/login', { email, password });
-      login(data.user, data.token);  // This updates global state + localStorage
+      
+      if (data.otpRequired) {
+        toast.info('Verification code sent to your email');
+        setShowOtpInput(true);
+      } else {
+        login(data.user, data.token);
+        toast.success('Login successful!');
+        navigate('/products');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Login failed');
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    try {
+      const { data } = await axios.post('http://localhost:5001/api/auth/verify-otp', { email, otp });
+      login(data.user, data.token);
       toast.success('Login successful!');
       navigate('/products');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Login failed');
+      toast.error(err.response?.data?.message || 'Invalid or expired code');
     }
   };
 
   return (
     <div style={{ maxWidth: '400px', margin: '50px auto' }}>
       <h2>Login</h2>
-      <form onSubmit={submitHandler}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
-        />
-        <button type="submit" style={{ padding: '10px 20px' }}>Login</button>
-      </form>
+
+      {!showOtpInput ? (
+        <form onSubmit={handleLogin}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
+          />
+          <button type="submit" style={{ padding: '10px 20px' }}>Login</button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerifyOtp}>
+          <h3>Enter Verification Code</h3>
+          <p>Check your email ({email}) for the code</p>
+          <input
+            type="text"
+            placeholder="6-digit code"
+            value={otp}
+            onChange={(e) => setOtp(e.target.value)}
+            required
+            maxLength={6}
+            style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
+          />
+          <button type="submit" style={{ padding: '10px 20px' }}>Verify & Login</button>
+        </form>
+      )}
+
       <ToastContainer />
     </div>
   );

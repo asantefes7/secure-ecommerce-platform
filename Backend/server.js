@@ -3,25 +3,43 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
 const cors = require('cors');
+const session = require('express-session');
 
 dotenv.config();
 
 const app = express();
-app.use(helmet());  // Adds security headers
-app.use(cors());    // Allows frontend requests
-app.use(express.json());  // Parses JSON bodies
+app.set('trust proxy', 1); // Trust first proxy (helps cookie sending)
 
-// MongoDB connection 
+// Security & parsing middleware
+app.use(helmet());           // Security headers
+app.use(cors());             // Allow frontend requests
+app.use(express.json());     // Parse JSON bodies
+
+// Session middleware (memory store for local dev)
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: true, 
+  cookie: {
+    maxAge: 5 * 60 * 1000,    
+    secure: false,            
+    httpOnly: true,
+    sameSite: 'none',        
+    path: '/'
+  }
+}));
+
+// MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log(err));
+  .catch(err => console.log('MongoDB connection error:', err));
 
-  // Routes
+// Routes
 const authRouter = require('./routes/auth');
-app.use('/api/auth', authRouter); 
+app.use('/api/auth', authRouter);
 
 const userRouter = require('./routes/userRoutes');
-app.use('/api/users', userRouter); 
+app.use('/api/users', userRouter);
 
 const productRouter = require('./routes/productRoutes');
 app.use('/api/products', productRouter);
@@ -30,7 +48,7 @@ const checkoutRouter = require('./routes/checkoutRoutes');
 app.use('/api/checkout', checkoutRouter);
 
 const ordersRouter = require('./routes/ordersRoutes');
-app.use('/api/orders', ordersRouter); 
+app.use('/api/orders', ordersRouter);
 
 const fraudRouter = require('./routes/fraudRoutes');
 app.use('/api/fraud', fraudRouter);

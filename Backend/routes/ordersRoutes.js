@@ -49,4 +49,31 @@ router.get('/my-orders', protect, async (req, res) => {
   }
 });
 
+// NEW: Update order status (admin only)
+router.patch('/:id/status', protect, async (req, res) => {
+  if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+
+  const { status } = req.body;
+  const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ message: 'Invalid status' });
+  }
+
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    order.status = status;
+    await order.save();
+
+    res.json(order); // Return updated order
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 module.exports = router;
