@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const generateOTP = require('../utils/generateOTP');
 const sendEmail = require('../utils/sendEmail');
+const { protect } = require('../middleware/authMiddleware');
 
 dotenv.config();
 
@@ -26,25 +27,6 @@ router.post('/register', async (req, res) => {
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ message: 'Server error during registration' });
-  }
-});
-
-// Temporary: Register admin (remove after creating first admin)
-router.post('/register-admin', async (req, res) => {
-  const { name, email, password } = req.body;
-  try {
-    let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ message: 'User already exists' });
-
-    user = new User({ name, email, password, isAdmin: true });
-    await user.save();
-
-    const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '30d' });
-
-    res.json({ token, user: { id: user._id, name, email, isAdmin: user.isAdmin } });
-  } catch (err) {
-    console.error('Admin register error:', err);
-    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -119,6 +101,21 @@ router.post('/verify-otp', async (req, res) => {
   } catch (err) {
     console.error('Verify OTP error:', err);
     res.status(500).json({ message: 'Server error during OTP verification' });
+  }
+});
+
+// Create new admin (admin-only)
+router.post('/create-admin', protect, async (req, res) => {
+  if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+  const { name, email, password } = req.body;
+  try {
+    let user = await User.findOne({ email });
+    if (user) return res.status(400).json({ message: 'User already exists' });
+    user = new User({ name, email, password, isAdmin: true });
+    await user.save();
+    res.status(201).json({ message: 'Admin created' });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
