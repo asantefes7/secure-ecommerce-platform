@@ -1,11 +1,12 @@
 const express = require('express');
 const User = require('../models/User');
-const Otp = require('../models/otp'); 
+const Otp = require('../models/Otp'); 
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const generateOTP = require('../utils/generateOTP');
 const sendEmail = require('../utils/sendEmail');
 const { protect } = require('../middleware/authMiddleware');
+const bcrypt = require('bcryptjs'); // Added for hashing new password
 
 dotenv.config();
 
@@ -30,7 +31,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login user - Step 1: Check credentials → always send OTP
+// Login user - Step 1: Check credentials -> always send OTP
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -64,7 +65,7 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// Verify OTP - Step 2: Validate code from DB → return token & user
+// Verify OTP - Step 2: Validate code from DB -> return token & user
 router.post('/verify-otp', async (req, res) => {
   const { email, otp } = req.body;
 
@@ -85,7 +86,7 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired code' });
     }
 
-    // OTP valid → delete it
+    // OTP valid -> delete it
     await Otp.deleteOne({ _id: otpRecord._id });
     console.log('VERIFY - OTP validated and deleted');
 
@@ -115,6 +116,94 @@ router.post('/create-admin', protect, async (req, res) => {
     await user.save();
     res.status(201).json({ message: 'Admin created' });
   } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// NEW: Forgot password - Send reset OTP
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'User not found' });
+
+    const otp = generateOTP();
+    const otpText = `Your password reset code is: ${otp}\n\nThis code expires in 5 minutes. Do not share it.`;
+
+    await sendEmail(user.email, 'Secure E-Commerce Password Reset Code', otpText);
+
+    await Otp.create({
+      email: user.email,
+      otp,
+      type: 'reset',
+      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+    });
+
+    console.log('RESET OTP sent to:', user.email, 'Code:', otp);
+
+    res.json({ message: 'Reset code sent to your email' });
+  } catch (err) {
+    console.error('Forgot password error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// NEW: Verify reset OTP
+router.post('/verify-reset-otp', async (req, res) => {
+  const { email, otp } = req.body;
+  try {
+    const otpRecord = await Otp.findOne({ email, otp, type: 'reset' });
+
+    if (!otpRecord) return res.status(400).json({ message: 'Invalid code' });
+
+    if (otpRecord.expiresAt < new Date()) {
+      await Otp.deleteOne({ _id: otpRecord._id });
+      return res.status(400).json({ message: 'Invalid or expired code' });
+    }
+
+    res.json({ message: 'OTP verified' });
+  } catch (err) {
+    console.error('Verify reset OTP error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// NEW: Reset password (after OTP verify)
+router.post('/reset-password', async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+  try {
+    const otpRecord = await Otp.findOne({ email, otp, type: 'reset' });
+
+    if (!otpRecord) return res.status(400).json({ message: 'Invalid code' });
+
+    if (otpRecord.expiresAt < new Date()) {
+      await Otp.deleteOne({ _id: otpRecord._id });
+      return res.status(400).json({ message: 'Invalid or expired code' });
+    }
+
+    await Otp.deleteOne({ _id: otpRecord._id });
+
+    const hashed = await bcrypt.hash(newPassword, 12);
+    console.log('New hashed password:', hashed); // Debug hash
+
+    const userBefore = await User.findOne({ email }); // NEW: Get before hash
+    console.log('Old stored hash before update:', userBefore.password); // NEW: Debug old
+
+    const updatedUser = await User.findOneAndUpdate(
+      { email },
+      { password: hashed },
+      { new: true, runValidators: true } // Return new doc, run validators
+    );
+
+    if (!updatedUser) return res.status(400).json({ message: 'User not found' });
+
+    console.log('User ID for reset:', updatedUser._id); // Debug ID
+    console.log('Updated stored hash:', updatedUser.password); // NEW: Debug new in returned doc
+    console.log('Password reset saved for email:', email); // Confirm
+
+    res.json({ message: 'Password reset successful' });
+  } catch (err) {
+    console.error('Reset password error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

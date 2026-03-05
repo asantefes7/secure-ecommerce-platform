@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const otpSchema = new mongoose.Schema({
   email: { type: String, required: true },
   otp: { type: String, required: true },
-  type: { type: String, enum: ['login', 'checkout'], required: true },
+  type: { type: String, enum: ['login', 'checkout', 'reset'], required: true },
   expiresAt: { type: Date, required: true, expires: 300 }, // Auto-expire in 5 min
 }, { timestamps: true });
 

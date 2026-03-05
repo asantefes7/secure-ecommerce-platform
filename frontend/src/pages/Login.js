@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Login = () => {
@@ -65,6 +65,9 @@ const Login = () => {
             style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
           />
           <button type="submit" style={{ padding: '10px 20px' }}>Login</button>
+          <p style={{ marginTop: '10px' }}>
+            <Link to="/forgot-password">Forgot Password?</Link> {/* NEW: Forgot link */}
+          </p>
         </form>
       ) : (
         <form onSubmit={handleVerifyOtp}>

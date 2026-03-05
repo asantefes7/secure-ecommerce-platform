@@ -10,6 +10,7 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import MyOrders from './pages/MyOrders';
 import FlaggedOrders from './pages/FlaggedOrders';
+import ForgotPassword from './pages/ForgotPassword';
 
 const Home = () => {
   return (
@@ -34,6 +35,7 @@ function App() {
         <Route path="/my-orders" element={<MyOrders />} />
         <Route path="/admin/flagged-orders" element={<FlaggedOrders />} />
         <Route path="/" element={<Home />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
       <ToastContainer position="top-center" autoClose={5000} />
     </div>
