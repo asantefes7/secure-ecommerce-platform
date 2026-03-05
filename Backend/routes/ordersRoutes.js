@@ -1,6 +1,7 @@
 const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
 const Order = require('../models/Order');
+const sendEmail = require('../utils/sendEmail'); // Added for emails
 
 const router = express.Router();
 
@@ -49,7 +50,7 @@ router.get('/my-orders', protect, async (req, res) => {
   }
 });
 
-// NEW: Update order status (admin only)
+// Update order status (admin only)
 router.patch('/:id/status', protect, async (req, res) => {
   if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
 
@@ -72,6 +73,48 @@ router.patch('/:id/status', protect, async (req, res) => {
     res.json(order); // Return updated order
   } catch (err) {
     console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// NEW: Send order confirmation email (called after purchase)
+router.post('/:id/send-confirmation-email', protect, async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id).populate('user', 'name email');
+    if (!order || order.user._id.toString() !== req.user.id) return res.status(404).json({ message: 'Order not found' });
+
+    const itemsList = order.items.map(item => `${item.name} x ${item.qty} ($${item.price.toFixed(2)})`).join('\n');
+    const emailText = `Dear ${order.user.name},\n\nThank you for your purchase! Your order ID: ${order._id}\n\nItems:\n${itemsList}\n\nTotal: $${order.total.toFixed(2)}\nStatus: Pending\n\nWe'll update you when it ships!`;
+
+    await sendEmail(order.user.email, 'Order Confirmation', emailText);
+
+    console.log('Confirmation email sent to:', order.user.email, 'for order:', order._id);
+
+    res.json({ message: 'Confirmation email sent' });
+  } catch (err) {
+    console.error('Confirmation email error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// NEW: Send status update email (admin-only)
+router.post('/:id/send-status-email', protect, async (req, res) => {
+  if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+
+  const { newStatus } = req.body;
+  try {
+    const order = await Order.findById(req.params.id).populate('user', 'name email');
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    const emailText = `Dear ${order.user.name},\n\nYour order ID: ${order._id} status has been updated to ${newStatus}.\n\nThank you!`;
+
+    await sendEmail(order.user.email, 'Order Status Update', emailText);
+
+    console.log('Status email sent to:', order.user.email, 'for order:', order._id);
+
+    res.json({ message: 'Status email sent' });
+  } catch (err) {
+    console.error('Status email error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

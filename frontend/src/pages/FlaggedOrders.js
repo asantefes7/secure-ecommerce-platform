@@ -32,7 +32,7 @@ const FlaggedOrders = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate]); // Dependencies: navigate (toast is global, no need)
+  }, [navigate]);
 
   useEffect(() => {
     fetchFlaggedOrders();
@@ -45,10 +45,23 @@ const FlaggedOrders = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success('Order status updated!');
+      await sendStatusEmail(orderId, newStatus); // NEW: Send status email
       fetchFlaggedOrders(); // Refetch to update table
     } catch (err) {
       toast.error('Failed to update status');
       console.error(err);
+    }
+  };
+
+  const sendStatusEmail = async (orderId, newStatus) => {
+    const token = localStorage.getItem('token');
+    try {
+      await axios.post(`http://localhost:5001/api/orders/${orderId}/send-status-email`, { newStatus }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log('Status email sent for order:', orderId);
+    } catch (err) {
+      console.error('Status email error:', err);
     }
   };
 

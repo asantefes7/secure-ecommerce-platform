@@ -120,7 +120,7 @@ const CheckoutForm = () => {
         const isSuspicious = total / 100 > 500 || cartItems.length > 5 || fraudScore.is_fraud;
 
         try {
-          await axios.post('http://localhost:5001/api/orders', {
+          const orderRes = await axios.post('http://localhost:5001/api/orders', {
             items: cartItems.map(item => ({
               name: item.name,
               qty: item.qty,
@@ -133,6 +133,13 @@ const CheckoutForm = () => {
             headers: { Authorization: `Bearer ${token}` },
           });
           console.log('Order saved successfully');
+
+          // NEW: Send confirmation email
+          await axios.post(`http://localhost:5001/api/orders/${orderRes.data._id}/send-confirmation-email`, {}, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          console.log('Confirmation email sent');
+
         } catch (err) {
           console.error('Order save failed:', err);
         }
@@ -149,64 +156,71 @@ const CheckoutForm = () => {
   setLoading(false);
 };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    const fraud = await getFraudScore();
-    if (!fraud) {
-      setLoading(false);
-      return;
-    }
-
-    // If OTP required, wait for user to verify
-    if (fraud.otp_sent) {
-      setLoading(false);
-      return;
-    }
-
-    // Low-risk direct payment
-    if (!stripe || !elements || !clientSecret) {
-      setLoading(false);
-      return;
-    }
-
-    const cardElement = elements.getElement(CardElement);
-
-    const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card: cardElement },
-    });
-
-    if (error) {
-      toast.error(error.message || 'Payment failed');
-    } else if (paymentIntent.status === 'succeeded') {
-      const isSuspicious = total / 100 > 500 || cartItems.length > 5 || fraud.is_fraud;
-
-      try {
-        const token = localStorage.getItem('token');
-        await axios.post('http://localhost:5001/api/orders', {
-          items: cartItems.map(item => ({
-            name: item.name,
-            qty: item.qty,
-            price: item.price,
-          })),
-          total: total / 100,
-          isFlagged: isSuspicious,
-          paymentIntentId: paymentIntent.id,
-        }, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      } catch (err) {
-        console.error('Order save failed', err);
-      }
-
-      toast.success('Payment successful! Order placed.');
-      localStorage.removeItem('cartItems');
-      navigate('/');
-    }
-
+  const fraud = await getFraudScore();
+  if (!fraud) {
     setLoading(false);
-  };
+    return;
+  }
+
+  // If OTP required, wait for user to verify
+  if (fraud.otp_sent) {
+    setLoading(false);
+    return;
+  }
+
+  // Low-risk direct payment
+  if (!stripe || !elements || !clientSecret) {
+    setLoading(false);
+    return;
+  }
+
+  const cardElement = elements.getElement(CardElement);
+
+  const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+    payment_method: { card: cardElement },
+  });
+
+  if (error) {
+    toast.error(error.message || 'Payment failed');
+  } else if (paymentIntent.status === 'succeeded') {
+    const isSuspicious = total / 100 > 500 || cartItems.length > 5 || fraud.is_fraud;
+
+    try {
+      const token = localStorage.getItem('token');
+      const orderRes = await axios.post('http://localhost:5001/api/orders', {
+        items: cartItems.map(item => ({
+          name: item.name,
+          qty: item.qty,
+          price: item.price,
+        })),
+        total: total / 100,
+        isFlagged: isSuspicious,
+        paymentIntentId: paymentIntent.id,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // NEW: Send confirmation email
+      await axios.post(`http://localhost:5001/api/orders/${orderRes.data._id}/send-confirmation-email`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log('Confirmation email sent');
+
+    } catch (err) {
+      console.error('Order save failed', err);
+    }
+
+    toast.success('Payment successful! Order placed.');
+    localStorage.removeItem('cartItems');
+    navigate('/');
+  }
+
+  setLoading(false);
+};
 
   if (!isLoggedIn) { // NEW: Unauth message
     return (
