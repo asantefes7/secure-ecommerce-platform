@@ -50,19 +50,25 @@ router.post('/score', protect, async (req, res) => {
       user: userId,
       createdAt: { $gte: fiveMinAgo },
     });
-    const velocityFlag = recentOrders >= 3;
+    const velocityFlag = recentOrders >= 2; // LOWERED threshold from 3 to 2
 
     let geoDistance = null;
     let geoFlag = false;
 
-    if (location && currentUser.lastLocation) {
-      geoDistance = getDistance(
-        currentUser.lastLocation.lat,
-        currentUser.lastLocation.lng,
-        location.lat,
-        location.lng
-      );
-      geoFlag = geoDistance > 500;
+    if (location) {
+      if (currentUser.lastLocation) {
+        geoDistance = getDistance(
+          currentUser.lastLocation.lat,
+          currentUser.lastLocation.lng,
+          location.lat,
+          location.lng
+        );
+        geoFlag = geoDistance > 300; // LOWERED from 500km to 300km for more sensitivity
+      } else {
+        // First location known → treat as high risk if location provided (possible new device/country)
+        geoFlag = true;
+        geoDistance = -1; // Special value for no prior location
+      }
     }
 
     const pythonPath = 'python3';
@@ -87,18 +93,27 @@ router.post('/score', protect, async (req, res) => {
     }
 
     if (geoFlag) {
-      finalScore += 30;
-      reasons.push(`Location mismatch (${Math.round(geoDistance)}km from last)`);
+      finalScore += 60; // BOOSTED geo penalty (from 30 to 60) for early flags
+      if (geoDistance > 0) {
+        reasons.push(`Location mismatch (${Math.round(geoDistance)}km from last)`);
+      } else {
+        reasons.push('No prior location known - high risk');
+      }
     }
 
-    const isFraud = finalScore > 70 || velocityFlag || geoFlag;
+    // NEW: Early flag if any strong signal (even low amount/items)
+    const earlyFlag = geoFlag || velocityFlag || finalScore > 60; // Lower ML threshold
+
+    const isFraud = earlyFlag || finalScore > 70;
 
     let otp = null;
     let otpSent = false;
 
     if (isFraud) {
       otp = generateOTP();
-      const otpText = `Your verification code for high-risk checkout is: ${otp}\n\nThis code expires in 5 minutes. Do not share it.`;
+      const otpText = `Your verification code for high-risk checkout is: ${otp}\n\n` +
+                      `This code expires in 5 minutes. Do not share it.\n\n` +
+                      `Reason: ${reasons.join(', ')}`;
       await sendEmail(currentUser.email, 'Secure E-Commerce Verification Code', otpText);
       otpSent = true;
 
@@ -117,7 +132,7 @@ router.post('/score', protect, async (req, res) => {
           expiresAt: newOtp.expiresAt.toISOString()
         });
 
-        // Short delay to ensure DB write is visible to next query
+        // Short delay to ensure DB write is visible
         await new Promise(resolve => setTimeout(resolve, 200));
       } catch (otpErr) {
         console.error('OTP save error in /score:', otpErr.message, otpErr.stack);
@@ -130,11 +145,12 @@ router.post('/score', protect, async (req, res) => {
       reason: reasons.join(', ') || 'No specific reason',
       velocity_flag: velocityFlag,
       recent_orders: recentOrders,
-      geo_distance_km: geoDistance ? Math.round(geoDistance) : null,
+      geo_distance_km: geoDistance > 0 ? Math.round(geoDistance) : null,
       geo_flag: geoFlag,
       otp_sent: otpSent,
     };
 
+    // Always update lastLocation if provided (even low-risk)
     if (location) {
       await User.findByIdAndUpdate(userId, {
         lastLocation: { lat: location.lat, lng: location.lng },
@@ -149,19 +165,18 @@ router.post('/score', protect, async (req, res) => {
   }
 });
 
-// Verify OTP for high-risk checkout
+// Verify OTP for high-risk checkout (unchanged - already fixed)
 router.post('/verify-otp', protect, async (req, res) => {
   let { otp } = req.body;
 
-  // Trim and clean the entered OTP
-  otp = (otp || '').trim().replace(/\s+/g, ''); // Remove all whitespace
+  otp = (otp || '').trim().replace(/\s+/g, '');
 
   console.log('VERIFY OTP - Cleaned entered OTP:', otp);
   console.log('VERIFY OTP - Entered OTP length:', otp.length);
 
   try {
-    const userId = req.user.id; // From JWT (this works, like in /score)
-    const currentUser = await User.findById(userId); // NEW: Fetch user to get email (missing before)
+    const userId = req.user.id;
+    const currentUser = await User.findById(userId);
 
     if (!currentUser) {
       console.log('User not found in /verify-otp');
@@ -169,14 +184,14 @@ router.post('/verify-otp', protect, async (req, res) => {
     }
 
     console.log('VERIFY OTP - Searching for:', {
-      email: currentUser.email, // NEW: Use fetched email
+      email: currentUser.email,
       otp,
       type: 'checkout'
     });
 
     const otpRecord = await Otp.findOne({
-      email: currentUser.email, // NEW: Use fetched email
-      otp,  // Already trimmed
+      email: currentUser.email,
+      otp,
       type: 'checkout'
     });
 
