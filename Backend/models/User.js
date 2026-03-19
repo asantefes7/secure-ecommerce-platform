@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema({
     default: null,
   },
 
+  // NEW: Login rate limiting and lockout fields
+  failedLoginAttempts: { type: Number, default: 0 },
+  lockUntil: { type: Date, default: null },
+  loginAttemptsLastReset: { type: Date, default: Date.now },
+
 }, { timestamps: true });
 
 // Hash password before saving
@@ -29,11 +34,40 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// Match password for login
+// Match password for login + rate limiting logic
 userSchema.methods.matchPassword = async function (enteredPassword) {
-  console.log('Entered pass for match:', enteredPassword); // NEW: Debug entered
-  console.log('Stored hashed pass:', this.password); // NEW: Debug stored
-  return await bcrypt.compare(enteredPassword, this.password);
+  // Check if account is locked
+  if (this.lockUntil && this.lockUntil > Date.now()) {
+    const remaining = Math.ceil((this.lockUntil - Date.now()) / 60000);
+    throw new Error(`Account locked due to too many failed attempts. Try again in ${remaining} minutes.`);
+  }
+
+  const isMatch = await bcrypt.compare(enteredPassword, this.password);
+
+  if (isMatch) {
+    // Successful login → reset counter
+    this.failedLoginAttempts = 0;
+    this.lockUntil = null;
+    this.loginAttemptsLastReset = Date.now();
+  } else {
+    // Failed login → increment counter
+    this.failedLoginAttempts += 1;
+
+    // Reset counter if more than 10 minutes since last reset
+    if (this.loginAttemptsLastReset && (Date.now() - this.loginAttemptsLastReset) > 10 * 60 * 1000) {
+      this.failedLoginAttempts = 1;
+      this.loginAttemptsLastReset = Date.now();
+    }
+
+    // Lock account after 3 failed attempts within 10 minutes
+    if (this.failedLoginAttempts >= 3) {
+      this.lockUntil = new Date(Date.now() + 60 * 60 * 1000); // Lock for 60 minutes
+    }
+  }
+
+  await this.save(); // Save changes (attempts, lockUntil)
+
+  return isMatch;
 };
 
 const User = mongoose.model('User', userSchema);

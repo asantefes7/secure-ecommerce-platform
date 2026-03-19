@@ -26,7 +26,13 @@ const Login = () => {
         navigate('/products');
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Login failed');
+      // Handle lockout error specifically
+      const errorMessage = err.response?.data?.message || 'Login failed';
+      if (errorMessage.includes('Account locked')) {
+        toast.error(errorMessage); // Shows "Account locked due to too many failed attempts. Try again in 59 minutes."
+      } else {
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -66,7 +72,7 @@ const Login = () => {
           />
           <button type="submit" style={{ padding: '10px 20px' }}>Login</button>
           <p style={{ marginTop: '10px' }}>
-            <Link to="/forgot-password">Forgot Password?</Link> {/* NEW: Forgot link */}
+            <Link to="/forgot-password">Forgot Password?</Link>
           </p>
         </form>
       ) : (
@@ -86,7 +92,7 @@ const Login = () => {
         </form>
       )}
 
-      <ToastContainer />
+      <ToastContainer position="top-center" autoClose={5000} />
     </div>
   );
 };

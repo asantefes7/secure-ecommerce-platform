@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 const generateOTP = require('../utils/generateOTP');
 const sendEmail = require('../utils/sendEmail');
 const { protect } = require('../middleware/authMiddleware');
-const bcrypt = require('bcryptjs'); // Added for hashing new password
+const bcrypt = require('bcryptjs');
 
 dotenv.config();
 
@@ -38,17 +38,21 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
+    // NEW: Use matchPassword (which now handles lockout)
     const isMatch = await user.matchPassword(password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    // Always require OTP for login
+    if (!isMatch) {
+      // matchPassword already incremented failed attempts and set lock if needed
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Successful match → proceed with OTP
     const otp = generateOTP();
     const otpText = `Your login verification code is: ${otp}\n\n` +
                     `This code expires in 5 minutes. Do not share it.`;
 
     await sendEmail(user.email, 'Secure E-Commerce Login Verification Code', otpText);
 
-    // Store OTP in DB with expiry
     await Otp.create({
       email: user.email,
       otp,
@@ -61,6 +65,12 @@ router.post('/login', async (req, res) => {
     res.json({ otpRequired: true, message: 'Verification code sent to your email' });
   } catch (err) {
     console.error('Login error:', err);
+
+    // NEW: Catch lockout error and return specific message
+    if (err.message.includes('Account locked')) {
+      return res.status(403).json({ message: err.message }); // 403 Forbidden for lockout
+    }
+
     res.status(500).json({ message: 'Server error during login' });
   }
 });
@@ -86,11 +96,9 @@ router.post('/verify-otp', async (req, res) => {
       return res.status(400).json({ message: 'Invalid or expired code' });
     }
 
-    // OTP valid -> delete it
     await Otp.deleteOne({ _id: otpRecord._id });
     console.log('VERIFY - OTP validated and deleted');
 
-    // Generate token
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'User not found' });
 
@@ -183,23 +191,11 @@ router.post('/reset-password', async (req, res) => {
 
     await Otp.deleteOne({ _id: otpRecord._id });
 
-    const hashed = await bcrypt.hash(newPassword, 12);
-    console.log('New hashed password:', hashed); // Debug hash
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'User not found' });
 
-    const userBefore = await User.findOne({ email }); // NEW: Get before hash
-    console.log('Old stored hash before update:', userBefore.password); // NEW: Debug old
-
-    const updatedUser = await User.findOneAndUpdate(
-      { email },
-      { password: hashed },
-      { new: true, runValidators: true } // Return new doc, run validators
-    );
-
-    if (!updatedUser) return res.status(400).json({ message: 'User not found' });
-
-    console.log('User ID for reset:', updatedUser._id); // Debug ID
-    console.log('Updated stored hash:', updatedUser.password); // NEW: Debug new in returned doc
-    console.log('Password reset saved for email:', email); // Confirm
+    user.password = await bcrypt.hash(newPassword, 12);
+    await user.save();
 
     res.json({ message: 'Password reset successful' });
   } catch (err) {
