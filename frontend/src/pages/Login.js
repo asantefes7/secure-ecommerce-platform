@@ -9,6 +9,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtpInput, setShowOtpInput] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // Toggle for password visibility
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -62,14 +63,33 @@ const Login = () => {
             required
             style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
           />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
-          />
+
+          {/* Password field with eye toggle */}
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{ display: 'block', margin: '10px 0', padding: '10px', width: '100%' }}
+            />
+            <span
+              onClick={() => setShowPassword(!showPassword)}
+              style={{
+                position: 'absolute',
+                right: '10px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                cursor: 'pointer',
+                fontSize: '18px',
+                userSelect: 'none',
+              }}
+            >
+              {showPassword ? '👁️' : '👁️‍🗨️'}
+            </span>
+          </div>
+
           <button type="submit" style={{ padding: '10px 20px' }}>Login</button>
           <p style={{ marginTop: '10px' }}>
             <Link to="/forgot-password">Forgot Password?</Link>
