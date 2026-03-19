@@ -2,23 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import Slider from 'react-slick'; // NEW: Carousel
-import 'slick-carousel/slick/slick.css'; // NEW
-import 'slick-carousel/slick/slick-theme.css'; // NEW
-
-<style jsx>{`
-  .product-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
-    transition: all 0.3s ease;
-  }
-  .product-card .card-img-top {
-    transition: transform 0.4s ease;
-  }
-  .product-card:hover .card-img-top {
-    transform: scale(1.08);
-  }
-`}</style> 
+import Slider from 'react-slick';
+import 'slick-carousel/slick/slick.css';
+import 'slick-carousel/slick/slick-theme.css';
 
 const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -28,7 +14,7 @@ const Home = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Featured: limit 6 (any order)
+        // Featured: limit 6
         const featuredRes = await axios.get('http://localhost:5001/api/products?limit=6');
         setFeaturedProducts(featuredRes.data);
 
@@ -63,15 +49,16 @@ const Home = () => {
 
   return (
     <div>
-      {/* Hero Section */}
-      <section className="bg-dark text-white text-center py-5">
-        <div className="container">
+      {/* Hero Section with subtle gradient overlay */}
+      <section className="bg-dark text-white text-center py-5 position-relative overflow-hidden">
+        <div className="position-absolute top-0 start-0 w-100 h-100 bg-gradient" style={{ opacity: 0.6 }}></div>
+        <div className="container position-relative">
           <h1 className="display-4 fw-bold mb-3">Welcome to ShieldShop</h1>
           <p className="lead mb-4">
             Secure shopping for premium sneakers, watches, and clothing — protected by advanced fraud detection and trusted payments.
           </p>
 
-          {/* NEW: Trust Badge Row */}
+          {/* Trust Badge Row */}
           <div className="d-flex justify-content-center gap-4 mb-4 flex-wrap">
             <div className="d-flex align-items-center">
               <i className="bi bi-shield-lock-fill fs-3 me-2 text-success"></i>
@@ -91,8 +78,12 @@ const Home = () => {
             </div>
           </div>
 
+          {/* Buttons with pulse on Shop Now */}
           <div className="d-flex justify-content-center gap-3">
-            <Link to="/products" className="btn btn-primary btn-lg">
+            <Link 
+              to="/products" 
+              className="btn btn-primary btn-lg pulse-btn"
+            >
               Shop Now
             </Link>
             <Link to="/products" className="btn btn-outline-light btn-lg">
@@ -115,7 +106,9 @@ const Home = () => {
             <Slider {...settings}>
               {featuredProducts.map((product) => (
                 <div key={product._id} className="px-2">
-                  <div className="card h-100 shadow-sm border-0 product-card">
+                  <div className="card h-100 shadow-sm border-0 product-card position-relative">
+                    {/* Featured badge */}
+                    <span className="badge bg-primary position-absolute top-0 start-0 m-2 z-10">Featured</span>
                     <img
                       src={product.imageUrl || 'https://via.placeholder.com/300x300?text=' + encodeURIComponent(product.name)}
                       className="card-img-top"
@@ -140,7 +133,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* NEW: New Arrivals Section */}
+      {/* New Arrivals Section */}
       <section className="py-5">
         <div className="container">
           <h2 className="text-center mb-5">New Arrivals</h2>
@@ -153,7 +146,7 @@ const Home = () => {
             <div className="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
               {newArrivals.map((product) => (
                 <div className="col" key={product._id}>
-                  <div className="card h-100 shadow-sm border-0 product-card">
+                  <div className="card h-100 shadow-sm border-0 product-card position-relative">
                     <img
                       src={product.imageUrl || 'https://via.placeholder.com/300x300?text=' + encodeURIComponent(product.name)}
                       className="card-img-top"
@@ -240,6 +233,32 @@ const Home = () => {
           </div>
         </div>
       </section>
+
+      {/* CSS for pulse and hover */}
+      <style jsx>{`
+        .pulse-btn {
+          animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+          100% { transform: scale(1); }
+        }
+        .product-card:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+          transition: all 0.3s ease;
+        }
+        .product-card .card-img-top {
+          transition: transform 0.4s ease;
+        }
+        .product-card:hover .card-img-top {
+          transform: scale(1.08);
+        }
+        .bg-gradient {
+          background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%);
+        }
+      `}</style>
     </div>
   );
 };
