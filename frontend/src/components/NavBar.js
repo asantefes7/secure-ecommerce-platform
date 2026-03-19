@@ -15,7 +15,7 @@ const NavBar = () => {
 
   const navigate = useNavigate();
 
-  // Listen for storage changes from anywhere (login/logout)
+  // Listen for storage changes from anywhere (login/logout/favorites)
   useEffect(() => {
     const handleStorage = (e) => {
       if (e.key === 'token' || e.key === 'user') {
@@ -73,6 +73,11 @@ const NavBar = () => {
           {/* My Orders - visible to ALL logged-in users */}
           <Link to="/my-orders" style={{ color: 'white', margin: '0 15px', textDecoration: 'none' }}>
             My Orders
+          </Link>
+
+          {/* My Favorites link with heart icon */}
+          <Link to="/my-favorites" style={{ color: 'white', margin: '0 15px', textDecoration: 'none' }}>
+            <i className="bi bi-heart-fill me-1"></i> Favorites
           </Link>
 
           {isAdmin && (
