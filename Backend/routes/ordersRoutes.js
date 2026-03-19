@@ -7,20 +7,26 @@ const router = express.Router();
 
 // Save order after payment (called from frontend)
 router.post('/', protect, async (req, res) => {
-  const { items, total, isFlagged, paymentIntentId } = req.body;
+  const { items, total, isFlagged, flaggedReason, paymentIntentId } = req.body;
 
   try {
+    console.log('Received order data:', { isFlagged, flaggedReason }); // DEBUG: See if reasons arrive
+
     const order = new Order({
       user: req.user.id,
       items,
       total,
       isFlagged,
+      flaggedReason: flaggedReason || [], // Ensure array
       paymentIntentId,
     });
+
     await order.save();
+    console.log('Order saved with ID:', order._id, 'Reasons saved:', order.flaggedReason);
+
     res.status(201).json(order);
   } catch (err) {
-    console.error(err);
+    console.error('Order save error:', err);
     res.status(500).json({ message: 'Order save failed' });
   }
 });
