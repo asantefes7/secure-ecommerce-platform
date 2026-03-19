@@ -9,6 +9,11 @@ const Products = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchParams] = useSearchParams();
   const categoryFilter = searchParams.get('category') || 'All';
+  const [favorites, setFavorites] = useState([]); // Track favorited IDs
+
+  // Track selected size/color per product ID
+  const [selectedSizes, setSelectedSizes] = useState({});
+  const [selectedColors, setSelectedColors] = useState({});
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -19,6 +24,15 @@ const Products = () => {
         }
         const res = await axios.get(url);
         setProducts(res.data);
+
+        // Fetch user's favorites (if logged in)
+        const token = localStorage.getItem('token');
+        if (token) {
+          const favRes = await axios.get('http://localhost:5001/api/auth/favorites', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setFavorites(favRes.data.map(p => p._id));
+        }
       } catch (err) {
         toast.error('Failed to load products');
         console.error(err);
@@ -27,7 +41,33 @@ const Products = () => {
       }
     };
     fetchProducts();
-  }, [categoryFilter]); // Re-fetch when category changes
+  }, [categoryFilter]);
+
+  const toggleFavorite = async (productId) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.warning('Please login to add to favorites');
+      return;
+    }
+
+    try {
+      const res = await axios.post(`http://localhost:5001/api/auth/favorites/${productId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.data.favorited) {
+        setFavorites([...favorites, productId]);
+        toast.success('Added to favorites');
+      } else {
+        setFavorites(favorites.filter(id => id !== productId));
+        toast.info('Removed from favorites');
+      }
+    } catch (err) {
+      toast.error('Failed to update favorites');
+    }
+  };
+
+  const isFavorited = (productId) => favorites.includes(productId);
 
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -35,15 +75,35 @@ const Products = () => {
   );
 
   const addToCartHandler = (product) => {
-    let cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
-    const existItem = cartItems.find((x) => x._id === product._id);
+    const selectedSize = selectedSizes[product._id];
+    const selectedColor = selectedColors[product._id];
 
-    if (existItem) {
-      cartItems = cartItems.map((x) =>
-        x._id === product._id ? { ...x, qty: x.qty + 1 } : x
-      );
+    // Validation: require size/color if available
+    if (product.sizes?.length > 0 && !selectedSize) {
+      return toast.error('Please select a size');
+    }
+    if (product.colors?.length > 0 && !selectedColor) {
+      return toast.error('Please select a color');
+    }
+
+    let cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
+    const cartItem = {
+      ...product,
+      qty: 1,
+      selectedSize: selectedSize || null,
+      selectedColor: selectedColor || null,
+    };
+
+    const existing = cartItems.find(
+      item => item._id === product._id &&
+              item.selectedSize === selectedSize &&
+              item.selectedColor === selectedColor
+    );
+
+    if (existing) {
+      existing.qty += 1;
     } else {
-      cartItems = [...cartItems, { ...product, qty: 1 }];
+      cartItems.push(cartItem);
     }
 
     localStorage.setItem('cartItems', JSON.stringify(cartItems));
@@ -79,7 +139,19 @@ const Products = () => {
         <div className="row">
           {filteredProducts.map((product) => (
             <div key={product._id} className="col-md-4 mb-4">
-              <div className="card h-100 shadow-sm">
+              <div className="card h-100 shadow-sm position-relative">
+                {/* Heart Icon Toggle */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleFavorite(product._id);
+                  }}
+                  className="btn btn-sm position-absolute top-0 end-0 m-2 z-10"
+                  style={{ background: 'none', border: 'none' }}
+                >
+                  <i className={`bi ${isFavorited(product._id) ? 'bi-heart-fill text-danger' : 'bi-heart'} fs-4`}></i>
+                </button>
+
                 <img
                   src={product.imageUrl || 'https://via.placeholder.com/300x300?text=' + encodeURIComponent(product.name)}
                   className="card-img-top"
@@ -92,11 +164,49 @@ const Products = () => {
                   <p className="card-text flex-grow-1">{product.description}</p>
                   <p className="card-text"><strong>Price:</strong> ${product.price.toFixed(2)}</p>
                   <p className="card-text"><strong>In Stock:</strong> {product.countInStock}</p>
+
+                  {/* Size selector on list card */}
+                  {product.sizes?.length > 0 && (
+                    <div className="mb-2">
+                      <select
+                        className="form-select form-select-sm"
+                        value={selectedSizes[product._id] || ''}
+                        onChange={(e) => setSelectedSizes({ ...selectedSizes, [product._id]: e.target.value })}
+                      >
+                        <option value="">Choose size</option>
+                        {product.sizes.map((size, i) => (
+                          <option key={i} value={size}>{size}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Color selector on list card */}
+                  {product.colors?.length > 0 && (
+                    <div className="mb-3">
+                      <select
+                        className="form-select form-select-sm"
+                        value={selectedColors[product._id] || ''}
+                        onChange={(e) => setSelectedColors({ ...selectedColors, [product._id]: e.target.value })}
+                      >
+                        <option value="">Choose color</option>
+                        {product.colors.map((color, i) => (
+                          <option key={i} value={color}>{color}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <button
                     onClick={() => addToCartHandler(product)}
-                    className="btn btn-primary mt-auto"
+                    disabled={
+                      product.countInStock === 0 ||
+                      (product.sizes?.length > 0 && !selectedSizes[product._id]) ||
+                      (product.colors?.length > 0 && !selectedColors[product._id])
+                    }
+                    className={`btn btn-primary mt-auto ${product.countInStock > 0 ? '' : 'disabled'}`}
                   >
-                    Add to Cart
+                    {product.countInStock > 0 ? 'Add to Cart' : 'Out of Stock'}
                   </button>
                 </div>
               </div>
