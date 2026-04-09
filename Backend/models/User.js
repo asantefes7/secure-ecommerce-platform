@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   isAdmin: { type: Boolean, default: false },
 
-  // New fields for geo-fencing / location-based fraud detection
+  // Geo-fencing / location-based fraud detection
   lastLocation: {
     type: {
       lat: { type: Number },
@@ -20,10 +20,13 @@ const userSchema = new mongoose.Schema({
     default: null,
   },
 
-  // NEW: Login rate limiting and lockout fields
+  // Login rate limiting and lockout fields
   failedLoginAttempts: { type: Number, default: 0 },
   lockUntil: { type: Date, default: null },
   loginAttemptsLastReset: { type: Date, default: Date.now },
+
+  // Favorites / Wishlist
+  favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
 
 }, { timestamps: true });
 

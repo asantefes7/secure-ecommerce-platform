@@ -3,60 +3,42 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
 const cors = require('cors');
-const session = require('express-session');
 
 dotenv.config();
 
 const app = express();
-app.set('trust proxy', 1); // Trust first proxy (helps cookie sending)
 
-// Security & parsing middleware
-app.use(helmet());           // Security headers
-app.use(cors());             // Allow frontend requests
-app.use(express.json());     // Parse JSON bodies
-
-// Session middleware (memory store for local dev)
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: true, 
-  cookie: {
-    maxAge: 5 * 60 * 1000,    
-    secure: false,            
-    httpOnly: true,
-    sameSite: 'none',        
-    path: '/'
-  }
+// Security & middleware
+app.use(helmet());
+app.use(cors({
+  origin: true,               // Allow all origins for now (tighten later)
+  credentials: true
 }));
+app.use(express.json());
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log('MongoDB connection error:', err));
+  .then(() => console.log('MongoDB connected to Atlas'))
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);   // Exit if DB fails to connect
+  });
 
 // Routes
-const authRouter = require('./routes/auth');
-app.use('/api/auth', authRouter);
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/products', require('./routes/productRoutes'));
+app.use('/api/checkout', require('./routes/checkoutRoutes'));
+app.use('/api/orders', require('./routes/ordersRoutes'));
+app.use('/api/fraud', require('./routes/fraudRoutes'));
 
-const userRouter = require('./routes/userRoutes');
-app.use('/api/users', userRouter);
-
-const productRouter = require('./routes/productRoutes');
-app.use('/api/products', productRouter);
-
-const checkoutRouter = require('./routes/checkoutRoutes');
-app.use('/api/checkout', checkoutRouter);
-
-const ordersRouter = require('./routes/ordersRoutes');
-app.use('/api/orders', ordersRouter);
-
-const fraudRouter = require('./routes/fraudRoutes');
-app.use('/api/fraud', fraudRouter);
-
-// Basic test route
+// Basic health check
 app.get('/', (req, res) => {
-  res.send('Backend API is running!');
+  res.send('ShieldShop Backend is running successfully!');
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Start server
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

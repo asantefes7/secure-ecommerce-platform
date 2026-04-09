@@ -4,10 +4,12 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 
 const ProductDetail = () => {
-  const { id } = useParams(); // Get product ID from URL
+  const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -25,13 +27,29 @@ const ProductDetail = () => {
   }, [id]);
 
   const addToCart = () => {
+    // Validation: require size/color if available
+    if (product.sizes?.length > 0 && !selectedSize) {
+      return toast.error('Please select a size');
+    }
+    if (product.colors?.length > 0 && !selectedColor) {
+      return toast.error('Please select a color');
+    }
+
     let cart = JSON.parse(localStorage.getItem('cartItems') || '[]');
-    const existing = cart.find(item => item._id === product._id);
+    const cartItem = {
+      ...product,
+      qty: quantity,
+      selectedSize: selectedSize || null,
+      selectedColor: selectedColor || null,
+    };
+
+    const existing = cart.find(item => item._id === product._id && item.selectedSize === selectedSize && item.selectedColor === selectedColor);
     if (existing) {
       existing.qty += quantity;
     } else {
-      cart.push({ ...product, qty: quantity });
+      cart.push(cartItem);
     }
+
     localStorage.setItem('cartItems', JSON.stringify(cart));
     toast.success(`${product.name} (${quantity}) added to cart!`);
   };
@@ -70,6 +88,42 @@ const ProductDetail = () => {
             <strong>In Stock:</strong> {product.countInStock > 0 ? `${product.countInStock} available` : 'Out of stock'}
           </div>
 
+          {/* Size Selector */}
+          {product.sizes?.length > 0 && (
+            <div className="mb-4">
+              <label className="form-label fw-bold">Select Size:</label>
+              <select
+                className="form-select"
+                value={selectedSize}
+                onChange={(e) => setSelectedSize(e.target.value)}
+                required
+              >
+                <option value="">Choose a size</option>
+                {product.sizes.map((size, idx) => (
+                  <option key={idx} value={size}>{size}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Color Selector */}
+          {product.colors?.length > 0 && (
+            <div className="mb-4">
+              <label className="form-label fw-bold">Select Color:</label>
+              <select
+                className="form-select"
+                value={selectedColor}
+                onChange={(e) => setSelectedColor(e.target.value)}
+                required
+              >
+                <option value="">Choose a color</option>
+                {product.colors.map((color, idx) => (
+                  <option key={idx} value={color}>{color}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="input-group mb-4 w-50">
             <span className="input-group-text">Qty</span>
             <input
@@ -84,7 +138,7 @@ const ProductDetail = () => {
 
           <button
             onClick={addToCart}
-            disabled={product.countInStock === 0}
+            disabled={product.countInStock === 0 || (product.sizes?.length > 0 && !selectedSize) || (product.colors?.length > 0 && !selectedColor)}
             className={`btn btn-lg w-100 ${product.countInStock > 0 ? 'btn-success' : 'btn-secondary'}`}
           >
             {product.countInStock > 0 ? 'Add to Cart' : 'Out of Stock'}

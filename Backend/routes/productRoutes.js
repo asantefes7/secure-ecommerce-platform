@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
 router.post('/', protect, async (req, res) => {
   if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
 
-  const { name, description, price, countInStock, imageUrl, category } = req.body;
+  const { name, description, price, countInStock, imageUrl, category, sizes, colors } = req.body;
   try {
     const product = new Product({
       name,
@@ -43,7 +43,9 @@ router.post('/', protect, async (req, res) => {
       price,
       countInStock,
       imageUrl,
-      category, // NEW: Added category field
+      category,
+      sizes: sizes || [],
+      colors: colors || [],
       user: req.user.id
     });
     await product.save();
@@ -54,7 +56,7 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-// NEW: Get single product by ID
+// Get single product by ID
 router.get('/:id', async (req, res) => {
   try {
     const product = await Product.findById(req.params.id);
@@ -66,11 +68,38 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Update product (admin only) - PUT /:id
+router.put('/:id', protect, async (req, res) => {
+  if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+
+  try {
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true } // Return updated document, run validators
+    );
+
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    res.json(product);
+  } catch (err) {
+    console.error('Update product error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // DELETE product by ID (admin only)
-//router.delete('/delete-all', protect, async (req, res) => {
-  //if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
-  //await Product.deleteMany({});
-  //res.json({ message: 'All products deleted' });
-//});
+router.delete('/:id', protect, async (req, res) => {
+  if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
+
+  try {
+    const product = await Product.findByIdAndDelete(req.params.id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    res.json({ message: 'Product deleted' });
+  } catch (err) {
+    console.error('Delete product error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 module.exports = router;

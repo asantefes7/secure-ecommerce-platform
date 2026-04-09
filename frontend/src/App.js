@@ -12,7 +12,8 @@ import MyOrders from './pages/MyOrders';
 import FlaggedOrders from './pages/FlaggedOrders';
 import ForgotPassword from './pages/ForgotPassword';
 import ProductDetail from './pages/ProductDetail';
-import Home from './pages/Home'; 
+import Home from './pages/Home';
+import MyFavorites from './pages/MyFavorites'; 
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/my-orders" element={<MyOrders />} />
+        <Route path="/my-favorites" element={<MyFavorites />} /> 
         <Route path="/admin/flagged-orders" element={<FlaggedOrders />} />
 
         {/* Optional 404 */}

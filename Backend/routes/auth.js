@@ -1,5 +1,6 @@
 const express = require('express');
 const User = require('../models/User');
+const Product = require('../models/Product');
 const Otp = require('../models/Otp'); 
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
@@ -38,7 +39,7 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
-    // NEW: Use matchPassword (which now handles lockout)
+    // Use matchPassword (which now handles lockout)
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
@@ -66,9 +67,9 @@ router.post('/login', async (req, res) => {
   } catch (err) {
     console.error('Login error:', err);
 
-    // NEW: Catch lockout error and return specific message
+    // Catch lockout error and return specific message
     if (err.message.includes('Account locked')) {
-      return res.status(403).json({ message: err.message }); // 403 Forbidden for lockout
+      return res.status(403).json({ message: err.message });
     }
 
     res.status(500).json({ message: 'Server error during login' });
@@ -128,7 +129,7 @@ router.post('/create-admin', protect, async (req, res) => {
   }
 });
 
-// NEW: Forgot password - Send reset OTP
+// Forgot password - Send reset OTP
 router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   try {
@@ -156,7 +157,7 @@ router.post('/forgot-password', async (req, res) => {
   }
 });
 
-// NEW: Verify reset OTP
+// Verify reset OTP
 router.post('/verify-reset-otp', async (req, res) => {
   const { email, otp } = req.body;
   try {
@@ -176,7 +177,7 @@ router.post('/verify-reset-otp', async (req, res) => {
   }
 });
 
-// NEW: Reset password (after OTP verify)
+// Reset password (after OTP verify)
 router.post('/reset-password', async (req, res) => {
   const { email, otp, newPassword } = req.body;
   try {
@@ -200,6 +201,51 @@ router.post('/reset-password', async (req, res) => {
     res.json({ message: 'Password reset successful' });
   } catch (err) {
     console.error('Reset password error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Toggle Favorite (add/remove product from user's favorites)
+router.post('/favorites/:productId', protect, async (req, res) => {
+  try {
+    const productId = req.params.productId;
+    const user = await User.findById(req.user.id);
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    const isFavorited = user.favorites.includes(productId);
+
+    if (isFavorited) {
+      // Remove from favorites
+      user.favorites = user.favorites.filter(id => id.toString() !== productId);
+      await user.save();
+      return res.json({ message: 'Removed from favorites', favorited: false });
+    } else {
+      // Add to favorites
+      user.favorites.push(productId);
+      await user.save();
+      return res.json({ message: 'Added to favorites', favorited: true });
+    }
+  } catch (err) {
+    console.error('Toggle favorite error:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get User's Favorites (populated with product details)
+router.get('/favorites', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .populate('favorites', 'name description price imageUrl category'); // Populate product details
+
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    res.json(user.favorites);
+  } catch (err) {
+    console.error('Get favorites error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

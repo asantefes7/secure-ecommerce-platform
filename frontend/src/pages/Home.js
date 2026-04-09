@@ -10,17 +10,27 @@ const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [newArrivals, setNewArrivals] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [favorites, setFavorites] = useState([]); // Track favorited IDs
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Featured: limit 6
+        // Featured
         const featuredRes = await axios.get('http://localhost:5001/api/products?limit=6');
         setFeaturedProducts(featuredRes.data);
 
-        // New Arrivals: newest first, limit 6
+        // New Arrivals
         const newRes = await axios.get('http://localhost:5001/api/products?sort=-createdAt&limit=6');
         setNewArrivals(newRes.data);
+
+        // Fetch user's favorites (if logged in)
+        const token = localStorage.getItem('token');
+        if (token) {
+          const favRes = await axios.get('http://localhost:5001/api/auth/favorites', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setFavorites(favRes.data.map(p => p._id));
+        }
       } catch (err) {
         toast.error('Failed to load products');
         console.error(err);
@@ -30,6 +40,32 @@ const Home = () => {
     };
     fetchData();
   }, []);
+
+  const toggleFavorite = async (productId) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.warning('Please login to add to favorites');
+      return;
+    }
+
+    try {
+      const res = await axios.post(`http://localhost:5001/api/auth/favorites/${productId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.data.favorited) {
+        setFavorites([...favorites, productId]);
+        toast.success('Added to favorites');
+      } else {
+        setFavorites(favorites.filter(id => id !== productId));
+        toast.info('Removed from favorites');
+      }
+    } catch (err) {
+      toast.error('Failed to update favorites');
+    }
+  };
+
+  const isFavorited = (productId) => favorites.includes(productId);
 
   // Carousel settings
   const settings = {
@@ -109,6 +145,19 @@ const Home = () => {
                   <div className="card h-100 shadow-sm border-0 product-card position-relative">
                     {/* Featured badge */}
                     <span className="badge bg-primary position-absolute top-0 start-0 m-2 z-10">Featured</span>
+
+                    {/* Heart Icon Toggle */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(product._id);
+                      }}
+                      className="btn btn-sm position-absolute top-0 end-0 m-2 z-10"
+                      style={{ background: 'none', border: 'none' }}
+                    >
+                      <i className={`bi ${isFavorited(product._id) ? 'bi-heart-fill text-danger' : 'bi-heart'} fs-4`}></i>
+                    </button>
+
                     <img
                       src={product.imageUrl || 'https://via.placeholder.com/300x300?text=' + encodeURIComponent(product.name)}
                       className="card-img-top"
@@ -147,6 +196,18 @@ const Home = () => {
               {newArrivals.map((product) => (
                 <div className="col" key={product._id}>
                   <div className="card h-100 shadow-sm border-0 product-card position-relative">
+                    {/* Heart Icon Toggle */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(product._id);
+                      }}
+                      className="btn btn-sm position-absolute top-0 end-0 m-2 z-10"
+                      style={{ background: 'none', border: 'none' }}
+                    >
+                      <i className={`bi ${isFavorited(product._id) ? 'bi-heart-fill text-danger' : 'bi-heart'} fs-4`}></i>
+                    </button>
+
                     <img
                       src={product.imageUrl || 'https://via.placeholder.com/300x300?text=' + encodeURIComponent(product.name)}
                       className="card-img-top"
@@ -234,7 +295,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* CSS for pulse and hover */}
+      {/* CSS for pulse, hover, and badge */}
       <style jsx>{`
         .pulse-btn {
           animation: pulse 2s infinite;
