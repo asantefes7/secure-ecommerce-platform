@@ -9,6 +9,9 @@ const MyOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const navigate = useNavigate();
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   useEffect(() => {
     const fetchMyOrders = async () => {
       const token = localStorage.getItem('token');
@@ -19,7 +22,7 @@ const MyOrders = () => {
       }
 
       try {
-        const res = await axios.get('http://localhost:5001/api/orders/my-orders', {
+        const res = await axios.get(`${API_BASE}/api/orders/my-orders`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setOrders(res.data);

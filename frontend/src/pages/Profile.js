@@ -6,6 +6,9 @@ const Profile = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   useEffect(() => {
     const fetchProfile = async () => {
       const token = localStorage.getItem('token');
@@ -19,7 +22,7 @@ const Profile = () => {
         const config = {
           headers: { Authorization: `Bearer ${token}` },
         };
-        const { data } = await axios.get('http://localhost:5001/api/users/profile', config);
+        const { data } = await axios.get(`${API_BASE}/api/users/profile`, config);
         setUser(data);
         setLoading(false);
       } catch (err) {

@@ -11,10 +11,13 @@ const ProductDetail = () => {
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await axios.get(`http://localhost:5001/api/products/${id}`);
+        const res = await axios.get(`${API_BASE}/api/products/${id}`);
         setProduct(res.data);
       } catch (err) {
         toast.error('Product not found');

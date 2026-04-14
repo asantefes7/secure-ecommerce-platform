@@ -8,6 +8,9 @@ const FlaggedOrders = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   const fetchFlaggedOrders = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -17,7 +20,7 @@ const FlaggedOrders = () => {
     }
 
     try {
-      const res = await axios.get('http://localhost:5001/api/orders/flagged', {
+      const res = await axios.get(`${API_BASE}/api/orders/flagged`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setOrders(res.data);
@@ -41,11 +44,11 @@ const FlaggedOrders = () => {
   const handleStatusChange = async (orderId, newStatus) => {
     const token = localStorage.getItem('token');
     try {
-      await axios.patch(`http://localhost:5001/api/orders/${orderId}/status`, { status: newStatus }, {
+      await axios.patch(`${API_BASE}/api/orders/${orderId}/status`, { status: newStatus }, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success('Order status updated!');
-      await sendStatusEmail(orderId, newStatus); // NEW: Send status email
+      await sendStatusEmail(orderId, newStatus);
       fetchFlaggedOrders(); // Refetch to update table
     } catch (err) {
       toast.error('Failed to update status');
@@ -56,7 +59,7 @@ const FlaggedOrders = () => {
   const sendStatusEmail = async (orderId, newStatus) => {
     const token = localStorage.getItem('token');
     try {
-      await axios.post(`http://localhost:5001/api/orders/${orderId}/send-status-email`, { newStatus }, {
+      await axios.post(`${API_BASE}/api/orders/${orderId}/send-status-email`, { newStatus }, {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log('Status email sent for order:', orderId);
@@ -90,7 +93,7 @@ const FlaggedOrders = () => {
               <th>Items</th>
               <th>Payment ID</th>
               <th>Date</th>
-              <th>Status</th> {/* NEW: Status column */}
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -113,7 +116,7 @@ const FlaggedOrders = () => {
                 <td>{new Date(order.createdAt).toLocaleString()}</td>
                 <td>
                   <select
-                    defaultValue={order.status || 'Pending'} // Handle existing orders without status
+                    defaultValue={order.status || 'Pending'}
                     onChange={(e) => handleStatusChange(order._id, e.target.value)}
                     className="form-select form-select-sm d-inline-block w-auto me-2"
                   >

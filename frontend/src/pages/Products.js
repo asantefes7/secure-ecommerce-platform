@@ -15,10 +15,13 @@ const Products = () => {
   const [selectedSizes, setSelectedSizes] = useState({});
   const [selectedColors, setSelectedColors] = useState({});
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        let url = 'http://localhost:5001/api/products';
+        let url = `${API_BASE}/api/products`;
         if (categoryFilter !== 'All') {
           url += `?category=${categoryFilter}`;
         }
@@ -28,7 +31,7 @@ const Products = () => {
         // Fetch user's favorites (if logged in)
         const token = localStorage.getItem('token');
         if (token) {
-          const favRes = await axios.get('http://localhost:5001/api/auth/favorites', {
+          const favRes = await axios.get(`${API_BASE}/api/auth/favorites`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           setFavorites(favRes.data.map(p => p._id));
@@ -51,7 +54,7 @@ const Products = () => {
     }
 
     try {
-      const res = await axios.post(`http://localhost:5001/api/auth/favorites/${productId}`, {}, {
+      const res = await axios.post(`${API_BASE}/api/auth/favorites/${productId}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

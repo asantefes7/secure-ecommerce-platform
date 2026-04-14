@@ -12,21 +12,24 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState([]); // Track favorited IDs
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         // Featured
-        const featuredRes = await axios.get('http://localhost:5001/api/products?limit=6');
+        const featuredRes = await axios.get(`${API_BASE}/api/products?limit=6`);
         setFeaturedProducts(featuredRes.data);
 
         // New Arrivals
-        const newRes = await axios.get('http://localhost:5001/api/products?sort=-createdAt&limit=6');
+        const newRes = await axios.get(`${API_BASE}/api/products?sort=-createdAt&limit=6`);
         setNewArrivals(newRes.data);
 
         // Fetch user's favorites (if logged in)
         const token = localStorage.getItem('token');
         if (token) {
-          const favRes = await axios.get('http://localhost:5001/api/auth/favorites', {
+          const favRes = await axios.get(`${API_BASE}/api/auth/favorites`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           setFavorites(favRes.data.map(p => p._id));
@@ -49,7 +52,7 @@ const Home = () => {
     }
 
     try {
-      const res = await axios.post(`http://localhost:5001/api/auth/favorites/${productId}`, {}, {
+      const res = await axios.post(`${API_BASE}/api/auth/favorites/${productId}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

@@ -13,10 +13,13 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await axios.post('http://localhost:5001/api/auth/login', { email, password });
+      const { data } = await axios.post(`${API_BASE}/api/auth/login`, { email, password });
       
       if (data.otpRequired) {
         toast.info('Verification code sent to your email');
@@ -30,7 +33,7 @@ const Login = () => {
       // Handle lockout error specifically
       const errorMessage = err.response?.data?.message || 'Login failed';
       if (errorMessage.includes('Account locked')) {
-        toast.error(errorMessage); // Shows "Account locked due to too many failed attempts. Try again in 59 minutes."
+        toast.error(errorMessage);
       } else {
         toast.error(errorMessage);
       }
@@ -40,7 +43,7 @@ const Login = () => {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     try {
-      const { data } = await axios.post('http://localhost:5001/api/auth/verify-otp', { email, otp });
+      const { data } = await axios.post(`${API_BASE}/api/auth/verify-otp`, { email, otp });
       login(data.user, data.token);
       toast.success('Login successful!');
       navigate('/products');

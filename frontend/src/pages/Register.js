@@ -14,6 +14,9 @@ const Register = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   const validatePassword = (pwd) => {
     const lengthOk = pwd.length >= 8 && pwd.length <= 16;
     const hasUpper = /[A-Z]/.test(pwd);
@@ -37,7 +40,7 @@ const Register = () => {
     }
 
     try {
-      const { data } = await axios.post('http://localhost:5001/api/auth/register', {
+      const { data } = await axios.post(`${API_BASE}/api/auth/register`, {
         name,
         email,
         password,

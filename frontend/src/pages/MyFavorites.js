@@ -7,6 +7,9 @@ const MyFavorites = () => {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   useEffect(() => {
     const fetchFavorites = async () => {
       const token = localStorage.getItem('token');
@@ -16,7 +19,7 @@ const MyFavorites = () => {
       }
 
       try {
-        const res = await axios.get('http://localhost:5001/api/auth/favorites', {
+        const res = await axios.get(`${API_BASE}/api/auth/favorites`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setFavorites(res.data);
@@ -34,7 +37,7 @@ const MyFavorites = () => {
   const removeFavorite = async (productId) => {
     const token = localStorage.getItem('token');
     try {
-      await axios.post(`http://localhost:5001/api/auth/favorites/${productId}`, {}, {
+      await axios.post(`${API_BASE}/api/auth/favorites/${productId}`, {}, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setFavorites(favorites.filter(item => item._id !== productId));

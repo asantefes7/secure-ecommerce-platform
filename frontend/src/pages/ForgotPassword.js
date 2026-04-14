@@ -12,10 +12,13 @@ const ForgotPassword = () => {
   const [showResetForm, setShowResetForm] = useState(false);
   const navigate = useNavigate();
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   const handleForgot = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5001/api/auth/forgot-password', { email });
+      await axios.post(`${API_BASE}/api/auth/forgot-password`, { email });
       toast.info('Reset code sent to your email');
       setShowOtpForm(true);
     } catch (err) {
@@ -26,7 +29,7 @@ const ForgotPassword = () => {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5001/api/auth/verify-reset-otp', { email, otp });
+      await axios.post(`${API_BASE}/api/auth/verify-reset-otp`, { email, otp });
       toast.success('Code verified! Set new password');
       setShowOtpForm(false);
       setShowResetForm(true);
@@ -41,7 +44,7 @@ const ForgotPassword = () => {
       return toast.error('Passwords do not match');
     }
     try {
-      await axios.post('http://localhost:5001/api/auth/reset-password', { email, otp, newPassword });
+      await axios.post(`${API_BASE}/api/auth/reset-password`, { email, otp, newPassword });
       toast.success('Password reset successful! Login with new password');
       navigate('/login');
     } catch (err) {

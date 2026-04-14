@@ -24,9 +24,12 @@ const CheckoutForm = () => {
   const cartItems = JSON.parse(localStorage.getItem('cartItems') || '[]');
   const total = Math.round(cartItems.reduce((acc, item) => acc + item.price * item.qty, 0) * 100);
 
+  // Local backend URL (for development)
+  const API_BASE = 'http://localhost:5001';
+
   useEffect(() => {
     if (total > 0 && isLoggedIn) {
-      axios.post('http://localhost:5001/api/checkout/create-payment-intent', { amount: total })
+      axios.post(`${API_BASE}/api/checkout/create-payment-intent`, { amount: total })
         .then(res => setClientSecret(res.data.clientSecret))
         .catch(err => toast.error('Failed to initialize payment'));
     }
@@ -49,7 +52,6 @@ const CheckoutForm = () => {
   }, [total, isLoggedIn]);
 
   const getFraudScore = async () => {
-    const token = localStorage.getItem('token');
     try {
       const payload = {
         amount: total / 100,
@@ -57,7 +59,7 @@ const CheckoutForm = () => {
         location: location ? { lat: location.lat, lng: location.lng } : null,
       };
 
-      const res = await axios.post('http://localhost:5001/api/fraud/score', payload, {
+      const res = await axios.post(`${API_BASE}/api/fraud/score`, payload, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -83,14 +85,7 @@ const CheckoutForm = () => {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('No authentication token found');
-        setLoading(false);
-        return;
-      }
-
-      const verifyRes = await axios.post('http://localhost:5001/api/fraud/verify-otp', { otp: cleanOtp }, {
+      const verifyRes = await axios.post(`${API_BASE}/api/fraud/verify-otp`, { otp: cleanOtp }, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -113,7 +108,6 @@ const CheckoutForm = () => {
         } else if (paymentIntent.status === 'succeeded') {
           const isSuspicious = total / 100 > 500 || cartItems.length > 5 || fraudScore.is_fraud;
 
-          // Collect ALL possible reasons
           const flaggedReasons = [];
           if (total / 100 > 500) flaggedReasons.push(`High order value ($${total / 100})`);
           if (cartItems.length > 5) flaggedReasons.push(`High item count (${cartItems.length} items)`);
@@ -122,7 +116,7 @@ const CheckoutForm = () => {
           if (fraudScore.velocity_flag) flaggedReasons.push(`High velocity (${fraudScore.recent_orders} orders in last 5 min)`);
 
           try {
-            const orderRes = await axios.post('http://localhost:5001/api/orders', {
+            const orderRes = await axios.post(`${API_BASE}/api/orders`, {
               items: cartItems.map(item => ({
                 name: item.name,
                 qty: item.qty,
@@ -135,9 +129,8 @@ const CheckoutForm = () => {
             }, {
               headers: { Authorization: `Bearer ${token}` },
             });
-            console.log('Order saved successfully with reasons:', flaggedReasons);
 
-            await axios.post(`http://localhost:5001/api/orders/${orderRes.data._id}/send-confirmation-email`, {}, {
+            await axios.post(`${API_BASE}/api/orders/${orderRes.data._id}/send-confirmation-email`, {}, {
               headers: { Authorization: `Bearer ${token}` },
             });
           } catch (err) {
@@ -195,8 +188,7 @@ const CheckoutForm = () => {
       if (fraud.velocity_flag) flaggedReasons.push(`High velocity (${fraud.recent_orders} orders in last 5 min)`);
 
       try {
-        const token = localStorage.getItem('token');
-        const orderRes = await axios.post('http://localhost:5001/api/orders', {
+        const orderRes = await axios.post(`${API_BASE}/api/orders`, {
           items: cartItems.map(item => ({
             name: item.name,
             qty: item.qty,
@@ -209,9 +201,8 @@ const CheckoutForm = () => {
         }, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log('Order saved successfully with reasons:', flaggedReasons);
 
-        await axios.post(`http://localhost:5001/api/orders/${orderRes.data._id}/send-confirmation-email`, {}, {
+        await axios.post(`${API_BASE}/api/orders/${orderRes.data._id}/send-confirmation-email`, {}, {
           headers: { Authorization: `Bearer ${token}` },
         });
       } catch (err) {
