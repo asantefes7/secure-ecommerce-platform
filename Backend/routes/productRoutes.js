@@ -4,13 +4,13 @@ const Product = require('../models/Product');
 
 const router = express.Router();
 
-// Get all products (public) with optional filters: ?category= & ?limit=
+// Get all products
 router.get('/', async (req, res) => {
   try {
     const { category, limit } = req.query;
     let query = {};
 
-    // Filter by category if provided in URL (?category=Sneakers)
+    // Filter by category 
     if (category) {
       query.category = category;
     }
@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
     // Build query
     let productsQuery = Product.find(query);
 
-    // Apply limit if provided (?limit=6 for featured)
+    // Apply limit if provided
     if (limit) {
       productsQuery = productsQuery.limit(parseInt(limit));
     }
@@ -68,7 +68,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Update product (admin only) - PUT /:id
+// Update product (admin only)
 router.put('/:id', protect, async (req, res) => {
   if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
 
@@ -88,7 +88,7 @@ router.put('/:id', protect, async (req, res) => {
   }
 });
 
-// DELETE product by ID (admin only)
+// Delete product by ID (admin only)
 router.delete('/:id', protect, async (req, res) => {
   if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
 

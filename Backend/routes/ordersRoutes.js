@@ -10,14 +10,14 @@ router.post('/', protect, async (req, res) => {
   const { items, total, isFlagged, flaggedReason, paymentIntentId } = req.body;
 
   try {
-    console.log('Received order data:', { isFlagged, flaggedReason }); // DEBUG: See if reasons arrive
+    console.log('Received order data:', { isFlagged, flaggedReason });
 
     const order = new Order({
       user: req.user.id,
       items,
       total,
       isFlagged,
-      flaggedReason: flaggedReason || [], // Ensure array
+      flaggedReason: flaggedReason || [], 
       paymentIntentId,
     });
 
@@ -48,7 +48,7 @@ router.get('/my-orders', protect, async (req, res) => {
   try {
     const userOrders = await Order.find({ user: req.user.id })
       .populate('items.product', 'name')
-      .sort({ createdAt: -1 }); // Newest first
+      .sort({ createdAt: -1 }); 
     res.json(userOrders);
   } catch (err) {
     console.error(err);
@@ -83,7 +83,7 @@ router.patch('/:id/status', protect, async (req, res) => {
   }
 });
 
-// NEW: Send order confirmation email (called after purchase)
+//Send order confirmation email (called after purchase)
 router.post('/:id/send-confirmation-email', protect, async (req, res) => {
   try {
     const order = await Order.findById(req.params.id).populate('user', 'name email');
@@ -103,7 +103,7 @@ router.post('/:id/send-confirmation-email', protect, async (req, res) => {
   }
 });
 
-// NEW: Send status update email (admin-only)
+//Send status update email (admin-only)
 router.post('/:id/send-status-email', protect, async (req, res) => {
   if (!req.user.isAdmin) return res.status(403).json({ message: 'Admin access required' });
 

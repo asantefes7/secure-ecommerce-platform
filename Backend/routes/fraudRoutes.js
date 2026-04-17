@@ -11,7 +11,7 @@ const sendEmail = require('../utils/sendEmail');
 
 const router = express.Router();
 
-// Helper: Calculate distance between two lat/lng points (km)
+// Calculate distance between two lat/lng points (km)
 function getDistance(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = deg2rad(lat2 - lat1);
@@ -50,7 +50,7 @@ router.post('/score', protect, async (req, res) => {
       user: userId,
       createdAt: { $gte: fiveMinAgo },
     });
-    const velocityFlag = recentOrders >= 2; // LOWERED threshold from 3 to 2
+    const velocityFlag = recentOrders >= 2; 
 
     let geoDistance = null;
     let geoFlag = false;
@@ -63,11 +63,11 @@ router.post('/score', protect, async (req, res) => {
           location.lat,
           location.lng
         );
-        geoFlag = geoDistance > 300; // LOWERED from 500km to 300km for more sensitivity
+        geoFlag = geoDistance > 300; 
       } else {
         // First location known → treat as high risk if location provided (possible new device/country)
         geoFlag = true;
-        geoDistance = -1; // Special value for no prior location
+        geoDistance = -1;
       }
     }
 
@@ -93,7 +93,7 @@ router.post('/score', protect, async (req, res) => {
     }
 
     if (geoFlag) {
-      finalScore += 60; // BOOSTED geo penalty (from 30 to 60) for early flags
+      finalScore += 60; // Boosted geo fencing (from 30 to 60) for early flags
       if (geoDistance > 0) {
         reasons.push(`Location mismatch (${Math.round(geoDistance)}km from last)`);
       } else {
@@ -101,7 +101,7 @@ router.post('/score', protect, async (req, res) => {
       }
     }
 
-    // NEW: Early flag if any strong signal (even low amount/items)
+    // Early flag if any strong signal (even low amount/items)
     const earlyFlag = geoFlag || velocityFlag || finalScore > 60; // Lower ML threshold
 
     const isFraud = earlyFlag || finalScore > 70;
@@ -165,7 +165,7 @@ router.post('/score', protect, async (req, res) => {
   }
 });
 
-// Verify OTP for high-risk checkout (unchanged - already fixed)
+// Verify OTP for high-risk checkout
 router.post('/verify-otp', protect, async (req, res) => {
   let { otp } = req.body;
 

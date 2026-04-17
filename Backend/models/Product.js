@@ -9,7 +9,7 @@ const productSchema = new mongoose.Schema({
   category: { type: String, required: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // Links to creator/admin
 
-  // NEW: Sizes and Colors for user selection
+  // Sizes and Colors for user selection
   sizes: [{ type: String }], // e.g., ["7", "8", "9", "10", "11", "12"]
   colors: [{ type: String }], // e.g., ["Black", "White", "Red", "Blue"]
 
