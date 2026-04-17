@@ -11,17 +11,19 @@ const app = express();
 // Security & middleware
 app.use(helmet());
 app.use(cors({
-  origin: true,               // Allow all origins for now (tighten later)
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('MongoDB connected to Atlas'))
+  .then(() => {
+    console.log('MongoDB connected');  
+  })
   .catch(err => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1);   // Exit if DB fails to connect
+    console.error('MongoDB connection error:', err.message);
+    process.exit(1);
   });
 
 // Routes
